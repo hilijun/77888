@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Keno · 快乐彩数据分析</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f5f7fb;
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+        .app {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            padding: 20px 18px 30px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .subhead {
+            color: #64748b;
+            font-size: 14px;
+            border-left: 3px solid #3b82f6;
+            padding-left: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .countdown-badge {
+            background: #eef2ff;
+            color: #2563eb;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 16px 14px;
+            margin-bottom: 20px;
+            border: 1px solid #e9edf2;
+        }
+        .grid-20 {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 6px;
+            margin: 10px 0 6px;
+        }
+        .ball {
+            background: white;
+            border-radius: 30px;
+            padding: 6px 0;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            color: #0f172a;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+        }
+        .ball.bonus {
+            background: #fef9c3;
+            border-color: #facc15;
+            color: #854d0e;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .stat-item {
+            background: white;
+            border-radius: 16px;
+            padding: 8px 4px;
+            text-align: center;
+            border: 1px solid #e9edf2;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            letter-spacing: 0.3px;
+        }
+        .stat-value {
+            font-size: 22px;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.3;
+        }
+        .scratch-area {
+            background: linear-gradient(145deg, #f1f5f9, #ffffff);
+            border-radius: 40px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+            border: 1px dashed #b9c7da;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .scratch-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            background: white;
+            padding: 0 18px;
+            border-radius: 60px;
+            line-height: 52px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            letter-spacing: 1px;
+        }
+        .history-table-wrap {
+            overflow-x: auto;
+            margin-top: 10px;
+            border-radius: 16px;
+            border: 1px solid #e9edf2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 550px;
+        }
+        th {
+            background: #f1f5f9;
+            padding: 10px 6px;
+            font-weight: 600;
+            color: #334155;
+            text-align: center;
+            border-bottom: 1px solid #dce1e9;
+        }
+        td {
+            padding: 8px 4px;
+            text-align: center;
+            border-bottom: 1px solid #ebeff4;
+            background: white;
+        }
+        .flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .mt-2 { margin-top: 10px; }
+        .refresh-btn {
+            background: #eef2ff;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 16px;
+            font-weight: 500;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 14px;
+        }
+        .refresh-btn:active { background: #d9e2f7; }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .danger-btn {
+            background: #fee2e2;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 16px;
+            font-weight: 500;
+            color: #b91c1c;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 14px;
+        }
+        .danger-btn:active { background: #fecaca; }
+        .footer-note {
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: right;
+            margin-top: 12px;
+        }
+        @media (max-width: 500px) {
+            .grid-20 { grid-template-columns: repeat(5, 1fr); }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .toast {
+            background: #1e293b;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-size: 14px;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 999;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+        .toast.show { opacity: 1; }
+        .hm-badge {
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 28px;
+        }
+        .hm-badge.h-correct { background: #dcfce7; color: #15803d; }
+        .hm-badge.h-wrong { background: #fee2e2; color: #b91c1c; }
+        .hm-badge.m-correct { background: #dbeafe; color: #1d4ed8; }
+        .hm-badge.m-wrong { background: #fef3c7; color: #b45309; }
+        .hm-badge.na { background: #f1f5f9; color: #94a3b8; }
+        .interval-tag {
+            display: inline-block;
+            padding: 1px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .interval-tag.interval1 { background: #dbeafe; color: #1d4ed8; }
+        .interval-tag.interval2 { background: #fae8ff; color: #a21caf; }
+        .legend-box {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 4px; }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+        .legend-color.correct { background: #dcfce7; border: 1px solid #86efac; }
+        .legend-color.wrong { background: #fee2e2; border: 1px solid #fca5a5; }
+        .bonus-indicator {
+            background: #fef9c3;
+            color: #854d0e;
+            font-size: 11px;
+            padding: 0 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+        .api-status {
+            font-size: 12px;
+            color: #64748b;
+            padding: 4px 12px;
+            background: #f1f5f9;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .api-status.online { background: #dcfce7; color: #15803d; }
+        .api-status.offline { background: #fee2e2; color: #b91c1c; }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: #22c55e; }
+        .status-dot.offline { background: #ef4444; }
+        .status-dot.loading {
+            background: #f59e0b;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .history-count {
+            font-size: 12px;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 2px 12px;
+            border-radius: 30px;
+        }
+        .new-badge {
+            background: #f59e0b;
+            color: white;
+            font-size: 10px;
+            padding: 1px 8px;
+            border-radius: 30px;
+            margin-left: 4px;
+            animation: blink 1s ease-in-out 3;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+        .debug-info {
+            font-size: 11px;
+            color: #94a3b8;
+            padding: 6px 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-top: 8px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .align-hint {
+            font-size: 11px;
+            color: #2563eb;
+            background: #dbeafe;
+            padding: 2px 10px;
+            border-radius: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <div class="flex">
+            <h1>🎲 Keno 分析</h1>
+            <span class="countdown-badge" id="countdownDisplay">⏳ --</span>
+        </div>
+        <div class="subhead">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span>📡 API数据</span>
+                <span class="api-status" id="apiStatus">
+                    <span class="status-dot loading" id="statusDot"></span>
+                    <span id="statusText">连接中...</span>
+                </span>
+                <span class="history-count" id="historyCount">📊 0 期</span>
+                <span class="align-hint">⬆️ 本期H/M 与 下期L 对比</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="refresh-btn" id="refreshBtn">⟳ 获取数据</button>
+                <button class="danger-btn" id="clearHistoryBtn">🗑️ 清除历史</button>
+            </div>
+        </div>
+
+        <!-- 最新期数卡片 -->
+        <div class="card" id="currentCard">
+            <div class="flex">
+                <span style="font-weight:600; font-size:18px;" id="periodDisplay">#--</span>
+                <span style="color:#475569;" id="dateDisplay">--</span>
+            </div>
+            <div class="grid-20" id="originalGrid"></div>
+            <div style="font-size:12px; color:#64748b; margin-top:2px;">原始开奖号码 <span class="bonus-indicator">★ Bonus</span></div>
+
+            <div style="margin-top: 12px; font-weight:500; color:#1e293b;">✨ 衍生组合 (相邻和) </div>
+            <div class="grid-20" id="derivedGrid"></div>
+
+            <div class="scratch-area">
+                <span style="font-weight:500; color:#334155;">🎯 刮刮乐 · L值</span>
+                <span class="scratch-number" id="scratchL">--</span>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-item"><div class="stat-label">H (E+F+G)</div><div class="stat-value" id="statH">--</div></div>
+                <div class="stat-item"><div class="stat-label">L (I+J+K)</div><div class="stat-value" id="statL">--</div></div>
+                <div class="stat-item"><div class="stat-label">M (余数)</div><div class="stat-value" id="statM">--</div></div>
+            </div>
+            <div class="flex mt-2" style="gap:10px;">
+                <span style="background:#f1f5f9; padding:4px 14px; border-radius:40px; font-size:13px;">H区间: <span id="intervalH" style="font-weight:600;">-</span></span>
+                <span style="background:#f1f5f9; padding:4px 14px; border-radius:40px; font-size:13px;">M区间: <span id="intervalM" style="font-weight:600;">-</span></span>
+                <span style="background:#f1f5f9; padding:4px 14px; border-radius:40px; font-size:13px;">下期L区间: <span id="intervalL" style="font-weight:600;">-</span></span>
+            </div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div style="display: flex; justify-content: space-between; margin: 8px 0 4px; flex-wrap: wrap; gap: 6px;">
+            <span style="font-weight:600; color:#1e293b;">📋 历史记录</span>
+            <span style="color:#64748b; font-size:13px;">H对错 / M对错 (与下期L区间比对)</span>
+        </div>
+        <div class="legend-box">
+            <span class="legend-item"><span class="legend-color correct"></span> 对 (区间相同)</span>
+            <span class="legend-item"><span class="legend-color wrong"></span> 错 (区间不同)</span>
+            <span style="color:#94a3b8;">— 表示等待下期数据</span>
+            <span style="color:#94a3b8;">💾 数据自动保存在本地</span>
+        </div>
+        <div class="history-table-wrap">
+            <table>
+                <thead><tr>
+                    <th>期数</th>
+                    <th>H值 / 区间</th>
+                    <th>M值 / 区间</th>
+                    <th>下期L值 / 区间</th>
+                    <th>H对错</th>
+                    <th>M对错</th>
+                </tr></thead>
+                <tbody id="historyBody">
+                    <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="debug-info">
+            <span>🔄 数据追加模式：每次获取新数据自动追加到历史记录</span>
+            <span>💾 数据持久化：保存在浏览器本地存储</span>
+            <span>📌 本期H/M 与 下期L 区间比对</span>
+        </div>
+        <div class="footer-note">* 保留最近100期 · 每期的H/M与下一期的L区间比对</div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        (function() {
+            // ============================================================
+            // 1. 配置
+            // ============================================================
+            const API_URL = '/api/live';
+            const STORAGE_KEY = 'keno_history_data_fixed_v2';
+            const MAX_HISTORY = 100;
+            
+            // ============================================================
+            // 2. 核心计算逻辑
+            // ============================================================
+            const BIG_ODD = [15, 17, 19, 21, 23, 25, 27];
+            const BIG_EVEN = [14, 16, 18, 20, 22, 24, 26];
+            const SMALL_ODD = [1, 3, 5, 7, 9, 11, 13];
+            const SMALL_EVEN = [0, 2, 4, 6, 8, 10, 12];
+
+            function getInterval(value) {
+                if (BIG_ODD.includes(value)) return '大单';
+                if (BIG_EVEN.includes(value)) return '大双';
+                if (SMALL_ODD.includes(value)) return '小单';
+                if (SMALL_EVEN.includes(value)) return '小双';
+                return '其他';
+            }
+
+            function getIntervalGroup(value) {
+                const inter = getInterval(value);
+                if (inter === '大单' || inter === '小双') return 1;
+                if (inter === '大双' || inter === '小单') return 2;
+                return 0;
+            }
+
+            function generateDerived(originalArray) {
+                if (!originalArray || originalArray.length !== 20) return [];
+                const derived = [];
+                for (let i = 0; i < 19; i++) {
+                    let sum = originalArray[i] + originalArray[i + 1];
+                    if (sum > 80) sum -= 80;
+                    derived.push(sum);
+                }
+                let last = originalArray[0] + originalArray[19];
+                if (last > 80) last -= 80;
+                derived.push(last);
+                derived.sort((a, b) => a - b);
+                return derived;
+            }
+
+            function computeEFG(derived) {
+                if (!derived || derived.length !== 20) return { E: 0, F: 0, G: 0, H: 0 };
+                const idxE = [1, 4, 7, 10, 13, 16];
+                const idxF = [2, 5, 8, 11, 14, 17];
+                const idxG = [3, 6, 9, 12, 15, 18];
+                let sumE = 0, sumF = 0, sumG = 0;
+                idxE.forEach(i => sumE += derived[i]);
+                idxF.forEach(i => sumF += derived[i]);
+                idxG.forEach(i => sumG += derived[i]);
+                const E = sumE % 10;
+                const F = sumF % 10;
+                const G = sumG % 10;
+                const H = E + F + G;
+                return { E, F, G, H };
+            }
+
+            function computeIJK(original) {
+                if (!original || original.length !== 20) return { I: 0, J: 0, K: 0, L: 0 };
+                const idxI = [1, 4, 7, 10, 13, 16];
+                const idxJ = [2, 5, 8, 11, 14, 17];
+                const idxK = [3, 6, 9, 12, 15, 18];
+                let sumI = 0, sumJ = 0, sumK = 0;
+                idxI.forEach(i => sumI += original[i]);
+                idxJ.forEach(i => sumJ += original[i]);
+                idxK.forEach(i => sumK += original[i]);
+                const I = sumI % 10;
+                const J = sumJ % 10;
+                const K = sumK % 10;
+                const L = I + J + K;
+                return { I, J, K, L };
+            }
+
+            function computeM(periodStr, H) {
+                const periodNum = parseInt(periodStr, 10);
+                if (isNaN(periodNum)) return 0;
+                const diff = periodNum - H;
+                return ((diff % 27) + 27) % 27;
+            }
+
+            function buildRecord(apiItem) {
+                const nbrsStr = apiItem.nbrs;
+                const original = nbrsStr.split(',').map(s => parseInt(s.trim(), 10));
+                if (original.length !== 20) return null;
+                const derived = generateDerived(original);
+                const efg = computeEFG(derived);
+                const ijk = computeIJK(original);
+                const H = efg.H;
+                const L = ijk.L;
+                const M = computeM(apiItem.nbr, H);
+                return {
+                    period: apiItem.nbr,
+                    date: apiItem.date,
+                    time: apiItem.time,
+                    original: original,
+                    derived: derived,
+                    H: H,
+                    L: L,
+                    M: M,
+                    groupH: getIntervalGroup(H),
+                    groupM: getIntervalGroup(M),
+                    groupL: getIntervalGroup(L),
+                    intervalH: getInterval(H),
+                    intervalM: getInterval(M),
+                    intervalL: getInterval(L),
+                    bonus: apiItem.bonus || '',
+                    correctH: null,
+                    correctM: null,
+                    timestamp: Date.now()
+                };
+            }
+
+            // ============================================================
+            // 3. 对错判断 - 核心修复
+            // ============================================================
+            // 
+            // 数据排列：按期数从新到旧（索引0最新）
+            // 例如：[82期, 81期, 80期, 79期, ...]
+            // 
+            // 本期H/M 与 下期L 对比：
+            // - 索引0（最新期）没有下期 → 显示 "—"
+            // - 索引1（81期）的下期是索引0（82期）
+            // - 索引2（80期）的下期是索引1（81期）
+            // 所以：索引 i 的 H/M 与 索引 i-1 的 L 比对（i > 0）
+            // ============================================================
+            function checkHMCorrect(current, nextPeriod) {
+                if (!current || !nextPeriod) return { correctH: null, correctM: null };
+                const hCorrect = (current.groupH === nextPeriod.groupL) ? '对' : '错';
+                const mCorrect = (current.groupM === nextPeriod.groupL) ? '对' : '错';
+                return { correctH: hCorrect, correctM: mCorrect };
+            }
+
+            // ============================================================
+            // 4. 本地存储操作
+            // ============================================================
+            
+            function loadFromLocalStorage() {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    if (data) {
+                        const parsed = JSON.parse(data);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            console.log(`📂 从本地存储加载了 ${parsed.length} 条记录`);
+                            return parsed;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('读取本地存储失败:', e);
+                }
+                return [];
+            }
+
+            function saveToLocalStorage(records) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+                    console.log(`💾 已保存 ${records.length} 条记录到本地存储`);
+                } catch (e) {
+                    console.warn('保存本地存储失败:', e);
+                }
+            }
+
+            function appendRecords(existingRecords, newRecords) {
+                if (!newRecords || newRecords.length === 0) return existingRecords;
+                
+                let allRecords = [...existingRecords];
+                const existingPeriods = new Set(allRecords.map(r => r.period));
+                let addedCount = 0;
+                
+                for (const rec of newRecords) {
+                    if (!existingPeriods.has(rec.period)) {
+                        allRecords.push(rec);
+                        existingPeriods.add(rec.period);
+                        addedCount++;
+                    }
+                }
+                
+                if (addedCount === 0) {
+                    console.log('📌 没有新数据需要添加');
+                    return allRecords;
+                }
+                
+                console.log(`✅ 新增 ${addedCount} 期数据`);
+                
+                // 按期数降序排列（最新在前）
+                allRecords.sort((a, b) => parseInt(b.period, 10) - parseInt(a.period, 10));
+                
+                if (allRecords.length > MAX_HISTORY) {
+                    allRecords = allRecords.slice(0, MAX_HISTORY);
+                }
+                
+                // 重新计算所有对错关系
+                updateHistoryCorrect(allRecords);
+                
+                saveToLocalStorage(allRecords);
+                
+                return allRecords;
+            }
+
+            // ============================================================
+            // 5. 更新对错关系 - 核心修复
+            // ============================================================
+            function updateHistoryCorrect(records) {
+                if (!records || records.length < 2) {
+                    if (records && records.length === 1) {
+                        records[0].correctH = '—';
+                        records[0].correctM = '—';
+                    }
+                    return;
+                }
+                
+                // records 按期数降序排列：[最新, 次新, 第三新, ...]
+                // 索引0：最新期，没有下期 → "—"
+                // 索引1：第2新，下期是索引0
+                // 索引2：第3新，下期是索引1
+                // 以此类推...
+                
+                // ✅ 最新一期（索引0）没有下期
+                records[0].correctH = '—';
+                records[0].correctM = '—';
+                
+                // ✅ 从索引1开始，每期的下期是索引 i-1
+                for (let i = 1; i < records.length; i++) {
+                    const current = records[i];      // 当期（较旧）
+                    const nextPeriod = records[i-1];  // 下期（较新，期数更大）
+                    const result = checkHMCorrect(current, nextPeriod);
+                    current.correctH = result.correctH;
+                    current.correctM = result.correctM;
+                }
+            }
+
+            // ============================================================
+            // 6. UI渲染
+            // ============================================================
+            
+            const ORIGINAL_GRID = document.getElementById('originalGrid');
+            const DERIVED_GRID = document.getElementById('derivedGrid');
+            const PERIOD_DISPLAY = document.getElementById('periodDisplay');
+            const DATE_DISPLAY = document.getElementById('dateDisplay');
+            const COUNTDOWN_DISPLAY = document.getElementById('countdownDisplay');
+            const STAT_H = document.getElementById('statH');
+            const STAT_L = document.getElementById('statL');
+            const STAT_M = document.getElementById('statM');
+            const INTERVAL_H = document.getElementById('intervalH');
+            const INTERVAL_M = document.getElementById('intervalM');
+            const INTERVAL_L = document.getElementById('intervalL');
+            const SCRATCH_L = document.getElementById('scratchL');
+            const HISTORY_BODY = document.getElementById('historyBody');
+            const HISTORY_COUNT = document.getElementById('historyCount');
+            const REFRESH_BTN = document.getElementById('refreshBtn');
+            const CLEAR_BTN = document.getElementById('clearHistoryBtn');
+            const TOAST = document.getElementById('toast');
+            const API_STATUS = document.getElementById('apiStatus');
+            const STATUS_DOT = document.getElementById('statusDot');
+            const STATUS_TEXT = document.getElementById('statusText');
+
+            function showToast(msg) {
+                TOAST.textContent = msg;
+                TOAST.classList.add('show');
+                clearTimeout(TOAST._timer);
+                TOAST._timer = setTimeout(() => TOAST.classList.remove('show'), 2500);
+            }
+
+            function setApiStatus(status, message) {
+                API_STATUS.className = 'api-status ' + status;
+                STATUS_DOT.className = 'status-dot ' + status;
+                STATUS_TEXT.textContent = message;
+            }
+
+            function renderGrid(container, numbers, bonusIndex = -1) {
+                container.innerHTML = '';
+                if (!numbers || numbers.length === 0) {
+                    for (let i = 0; i < 20; i++) {
+                        const div = document.createElement('div');
+                        div.className = 'ball';
+                        div.textContent = '·';
+                        container.appendChild(div);
+                    }
+                    return;
+                }
+                numbers.forEach((num, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'ball';
+                    if (idx === bonusIndex) div.classList.add('bonus');
+                    div.textContent = num;
+                    container.appendChild(div);
+                });
+            }
+
+            function getIntervalClass(group) {
+                if (group === 1) return 'interval1';
+                if (group === 2) return 'interval2';
+                return '';
+            }
+
+            function renderHistory(history) {
+                if (!history || history.length === 0) {
+                    HISTORY_BODY.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>`;
+                    HISTORY_COUNT.textContent = '📊 0 期';
+                    return;
+                }
+                let html = '';
+                const display = history.slice(0, MAX_HISTORY);
+                for (let i = 0; i < display.length; i++) {
+                    const rec = display[i];
+                    const hClass = rec.correctH === '对' ? 'h-correct' : (rec.correctH === '错' ? 'h-wrong' : 'na');
+                    const mClass = rec.correctM === '对' ? 'm-correct' : (rec.correctM === '错' ? 'm-wrong' : 'na');
+                    const hText = rec.correctH || '—';
+                    const mText = rec.correctM || '—';
+                    
+                    // 下期L：索引 i 的下期是 i-1（因为索引0是最新）
+                    let nextL = '—', nextLInterval = '—', nextLClass = '';
+                    if (i > 0) {
+                        const nextRec = display[i - 1];
+                        nextL = nextRec.L;
+                        nextLInterval = nextRec.intervalL;
+                        nextLClass = getIntervalClass(nextRec.groupL);
+                    }
+
+                    const isNew = rec.timestamp && (Date.now() - rec.timestamp < 180000);
+
+                    html += `<tr>
+                        <td><strong>${rec.period}</strong>${isNew ? ' <span class="new-badge">NEW</span>' : ''}</td>
+                        <td>${rec.H} <span class="interval-tag ${getIntervalClass(rec.groupH)}">${rec.intervalH}</span></td>
+                        <td>${rec.M} <span class="interval-tag ${getIntervalClass(rec.groupM)}">${rec.intervalM}</span></td>
+                        <td>${nextL !== '—' ? nextL : '—'}${nextL !== '—' ? ` <span class="interval-tag ${nextLClass}">${nextLInterval}</span>` : ''}</td>
+                        <td><span class="hm-badge ${hClass}">${hText}</span></td>
+                        <td><span class="hm-badge ${mClass}">${mText}</span></td>
+                    </tr>`;
+                }
+                HISTORY_BODY.innerHTML = html;
+                HISTORY_COUNT.textContent = `📊 ${display.length} 期`;
+            }
+
+            function updateUI(record, history) {
+                if (!record) {
+                    PERIOD_DISPLAY.textContent = '#--';
+                    DATE_DISPLAY.textContent = '--';
+                    renderGrid(ORIGINAL_GRID, []);
+                    renderGrid(DERIVED_GRID, []);
+                    STAT_H.textContent = '--';
+                    STAT_L.textContent = '--';
+                    STAT_M.textContent = '--';
+                    INTERVAL_H.textContent = '-';
+                    INTERVAL_M.textContent = '-';
+                    INTERVAL_L.textContent = '-';
+                    SCRATCH_L.textContent = '--';
+                    renderHistory(history);
+                    return;
+                }
+
+                PERIOD_DISPLAY.textContent = `#${record.period}`;
+                DATE_DISPLAY.textContent = `${record.date} ${record.time}`;
+                renderGrid(ORIGINAL_GRID, record.original, -1);
+                renderGrid(DERIVED_GRID, record.derived, -1);
+                STAT_H.textContent = record.H;
+                STAT_L.textContent = record.L;
+                STAT_M.textContent = record.M;
+                INTERVAL_H.textContent = record.intervalH;
+                INTERVAL_M.textContent = record.intervalM;
+                if (history && history.length > 1) {
+                    const nextRecord = history[1];
+                    INTERVAL_L.textContent = nextRecord ? nextRecord.intervalL : '等待下期';
+                } else {
+                    INTERVAL_L.textContent = '等待下期';
+                }
+                SCRATCH_L.textContent = record.L;
+                renderHistory(history);
+            }
+
+            // ============================================================
+            // 7. 数据获取
+            // ============================================================
+            
+            let isFetching = false;
+            let allHistoryData = [];
+
+            async function fetchData() {
+                if (isFetching) return;
+                isFetching = true;
+                REFRESH_BTN.disabled = true;
+                REFRESH_BTN.textContent = '⟳ 加载中';
+                setApiStatus('loading', '请求中...');
+
+                try {
+                    const url = `${API_URL}?t=${Date.now()}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data || !data.data || data.data.length === 0) {
+                        throw new Error('数据格式错误或为空');
+                    }
+                    
+                    const items = data.data.slice().sort((a, b) => parseInt(b.nbr, 10) - parseInt(a.nbr, 10));
+                    const newRecords = [];
+                    for (const item of items) {
+                        const rec = buildRecord(item);
+                        if (rec) newRecords.push(rec);
+                    }
+                    
+                    if (newRecords.length === 0) {
+                        throw new Error('数据解析失败');
+                    }
+
+                    COUNTDOWN_DISPLAY.textContent = `⏳ ${data.countdown || '--'}`;
+                    
+                    allHistoryData = appendRecords(allHistoryData, newRecords);
+                    
+                    const currentRecord = allHistoryData.length > 0 ? allHistoryData[0] : null;
+                    updateUI(currentRecord, allHistoryData);
+                    
+                    setApiStatus('online', '已连接 ✅');
+                    
+                } catch (error) {
+                    console.error('数据加载失败:', error);
+                    setApiStatus('offline', '连接失败 ❌');
+                    showToast(`❌ 加载失败: ${error.message}`);
+                } finally {
+                    isFetching = false;
+                    REFRESH_BTN.disabled = false;
+                    REFRESH_BTN.textContent = '⟳ 获取数据';
+                }
+            }
+
+            function clearHistory() {
+                if (confirm('确定要清除所有历史数据吗？')) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    allHistoryData = [];
+                    updateUI(null, []);
+                    showToast('🗑️ 历史已清除');
+                }
+            }
+
+            // ============================================================
+            // 8. 初始化
+            // ============================================================
+            
+            allHistoryData = loadFromLocalStorage();
+            
+            if (allHistoryData.length > 0) {
+                updateHistoryCorrect(allHistoryData);
+                const currentRecord = allHistoryData[0];
+                updateUI(currentRecord, allHistoryData);
+                showToast(`📂 已加载本地历史 ${allHistoryData.length} 期`);
+                console.log(`📂 已从本地存储恢复 ${allHistoryData.length} 条记录`);
+            }
+
+            REFRESH_BTN.addEventListener('click', fetchData);
+            CLEAR_BTN.addEventListener('click', clearHistory);
+
+            if (window._autoInterval) clearInterval(window._autoInterval);
+            window._autoInterval = setInterval(fetchData, 30000);
+
+            setTimeout(fetchData, 800);
+
+            window.addEventListener('beforeunload', () => {
+                if (window._autoInterval) clearInterval(window._autoInterval);
+            });
+
+            console.log('✅ 页面初始化完成');
+            console.log('📌 对错判断逻辑：本期H/M 与 下期L 区间比对');
+            console.log('📌 索引0（最新）无下期 → "—"');
+            console.log('📌 索引i 的下期是 索引i-1');
+        })();
+    </script>
+</body>
+</html>
