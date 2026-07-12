@@ -19,7 +19,7 @@
             justify-content: center;
         }
         .app {
-            max-width: 820px;
+            max-width: 880px;
             width: 100%;
             background: white;
             border-radius: 32px;
@@ -113,8 +113,8 @@
             color: #0f172a;
             line-height: 1.3;
         }
-        .stat-value.small {
-            font-size: 16px;
+        .stat-value.n-value {
+            color: #7c3aed;
         }
         .scratch-area {
             background: linear-gradient(145deg, #f1f5f9, #ffffff);
@@ -147,22 +147,24 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
-            min-width: 600px;
+            font-size: 12px;
+            min-width: 750px;
         }
         th {
             background: #f1f5f9;
-            padding: 10px 6px;
+            padding: 8px 4px;
             font-weight: 600;
             color: #334155;
             text-align: center;
-            border-bottom: 1px solid #dce1e9;
+            border-bottom: 2px solid #dce1e9;
+            font-size: 11px;
         }
         td {
-            padding: 8px 4px;
+            padding: 6px 3px;
             text-align: center;
             border-bottom: 1px solid #ebeff4;
             background: white;
+            font-size: 12px;
         }
         .flex {
             display: flex;
@@ -231,11 +233,11 @@
         }
         .toast.show { opacity: 1; }
         .badge-result {
-            padding: 2px 12px;
+            padding: 2px 10px;
             border-radius: 30px;
-            font-size: 12px;
-            font-weight: 600;
-            min-width: 36px;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 32px;
             display: inline-block;
         }
         .badge-result.correct {
@@ -252,9 +254,9 @@
         }
         .interval-tag {
             display: inline-block;
-            padding: 1px 10px;
+            padding: 1px 8px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             background: #f1f5f9;
             color: #475569;
@@ -324,8 +326,8 @@
         .new-badge {
             background: #f59e0b;
             color: white;
-            font-size: 10px;
-            padding: 1px 8px;
+            font-size: 9px;
+            padding: 1px 6px;
             border-radius: 30px;
             margin-left: 4px;
             animation: blink 1s ease-in-out 3;
@@ -352,10 +354,23 @@
             padding: 2px 10px;
             border-radius: 30px;
         }
-        .n-value {
-            font-weight: 700;
-            color: #7c3aed;
+        .hmn-group {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
+        .hmn-item {
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .hmn-item.h-correct { color: #15803d; }
+        .hmn-item.h-wrong { color: #b91c1c; }
+        .hmn-item.m-correct { color: #1d4ed8; }
+        .hmn-item.m-wrong { color: #b45309; }
+        .hmn-item.n-correct { color: #7c3aed; }
+        .hmn-item.n-wrong { color: #dc2626; }
+        .hmn-item.na { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -372,7 +387,7 @@
                     <span id="statusText">连接中...</span>
                 </span>
                 <span class="history-count" id="historyCount">📊 0 期</span>
-                <span class="align-hint">⬇️ 对错：本期N与下期L组合一致</span>
+                <span class="align-hint">H/M/N 分别与下期L比对</span>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                 <button class="refresh-btn" id="refreshBtn">⟳ 获取数据</button>
@@ -401,7 +416,7 @@
                 <div class="stat-item"><div class="stat-label">H (E+F+G)</div><div class="stat-value" id="statH">--</div></div>
                 <div class="stat-item"><div class="stat-label">L (I+J+K)</div><div class="stat-value" id="statL">--</div></div>
                 <div class="stat-item"><div class="stat-label">M (余数)</div><div class="stat-value" id="statM">--</div></div>
-                <div class="stat-item"><div class="stat-label">N (H+M+下期L)%27</div><div class="stat-value" id="statN" style="color:#7c3aed;">--</div></div>
+                <div class="stat-item"><div class="stat-label">N (H+M+下期L)%27</div><div class="stat-value n-value" id="statN">--</div></div>
             </div>
             <div class="flex mt-2" style="gap:10px;">
                 <span style="background:#f1f5f9; padding:4px 14px; border-radius:40px; font-size:13px;">H区间: <span id="intervalH" style="font-weight:600;">-</span></span>
@@ -414,7 +429,7 @@
         <!-- 历史记录 -->
         <div style="display: flex; justify-content: space-between; margin: 8px 0 4px; flex-wrap: wrap; gap: 6px;">
             <span style="font-weight:600; color:#1e293b;">📋 历史记录</span>
-            <span style="color:#64748b; font-size:13px;">对错：本期N与下期L组合一致</span>
+            <span style="color:#64748b; font-size:13px;">H/M/N 分别与下期L组合比对</span>
         </div>
         <div class="legend-box">
             <span class="legend-item"><span class="legend-color correct"></span> 对 (组合一致)</span>
@@ -426,21 +441,23 @@
             <table>
                 <thead><tr>
                     <th>期数</th>
-                    <th>H值 / 区间</th>
-                    <th>M值 / 区间</th>
-                    <th>L值 / 区间</th>
-                    <th>N值 / 区间</th>
-                    <th>下期L值 / 区间</th>
-                    <th>对错</th>
+                    <th>H / 区间</th>
+                    <th>M / 区间</th>
+                    <th>L / 区间</th>
+                    <th>N / 区间</th>
+                    <th>下期L / 区间</th>
+                    <th>H对错</th>
+                    <th>M对错</th>
+                    <th>N对错</th>
                 </tr></thead>
                 <tbody id="historyBody">
-                    <tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>
+                    <tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="debug-info">
             <span>🔄 N = (H + M + 下期L) % 27</span>
-            <span>📌 对错判断：本期N与下期L组合一致为"对"</span>
+            <span>📌 H/M/N 分别与下期L组合一致为"对"</span>
             <span>💾 数据持久化：保存在浏览器本地存储</span>
         </div>
         <div class="footer-note">* 保留最近100期 · 每期数据自动追加</div>
@@ -455,7 +472,7 @@
             // 1. 配置
             // ============================================================
             const API_URL = '/api/live';
-            const STORAGE_KEY = 'keno_history_data_v2';
+            const STORAGE_KEY = 'keno_history_data_v3';
             const MAX_HISTORY = 100;
             
             // ============================================================
@@ -535,7 +552,6 @@
                 return ((diff % 27) + 27) % 27;
             }
 
-            // 计算N值：N = (H + M + 下期L) % 27
             function computeN(H, M, nextL) {
                 if (nextL === undefined || nextL === null) return null;
                 const sum = H + M + nextL;
@@ -561,7 +577,7 @@
                     H: H,
                     L: L,
                     M: M,
-                    N: null, // 需要下期L才能计算
+                    N: null,
                     groupH: getIntervalGroup(H),
                     groupM: getIntervalGroup(M),
                     groupL: getIntervalGroup(L),
@@ -571,36 +587,40 @@
                     intervalL: getInterval(L),
                     intervalN: null,
                     bonus: apiItem.bonus || '',
-                    correct: null, // 对错结果
+                    correctH: null,
+                    correctM: null,
+                    correctN: null,
                     timestamp: Date.now()
                 };
             }
 
             // ============================================================
-            // 3. 对错判断 - 新版（N与下期L组合一致）
+            // 3. 对错判断 - H/M/N 分别判断
             // ============================================================
-            function checkCorrect(current, nextPeriod) {
-                if (!current || !nextPeriod) return null;
+            function checkAllCorrect(current, nextPeriod) {
+                if (!current || !nextPeriod) {
+                    return { correctH: null, correctM: null, correctN: null, N: null, groupN: null, intervalN: null };
+                }
                 
-                // 计算当前期的N值
+                // 计算N值
                 const N = computeN(current.H, current.M, nextPeriod.L);
-                if (N === null) return null;
+                const groupN = N !== null ? getIntervalGroup(N) : null;
+                const intervalN = N !== null ? getInterval(N) : null;
                 
-                // 获取N的区间
-                const groupN = getIntervalGroup(N);
-                const intervalN = getInterval(N);
-                
-                // 获取下期L的区间
-                const groupL = nextPeriod.groupL;
-                
-                // 判断组合是否一致（区间相同）
-                const isCorrect = (groupN === groupL);
+                // H对错：本期H 与 下期L 组合一致
+                const hCorrect = (current.groupH === nextPeriod.groupL) ? '对' : '错';
+                // M对错：本期M 与 下期L 组合一致
+                const mCorrect = (current.groupM === nextPeriod.groupL) ? '对' : '错';
+                // N对错：本期N 与 下期L 组合一致
+                const nCorrect = (groupN !== null && groupN === nextPeriod.groupL) ? '对' : '错';
                 
                 return {
+                    correctH: hCorrect,
+                    correctM: mCorrect,
+                    correctN: nCorrect,
                     N: N,
                     groupN: groupN,
-                    intervalN: intervalN,
-                    correct: isCorrect ? '对' : '错'
+                    intervalN: intervalN
                 };
             }
 
@@ -654,54 +674,44 @@
                 
                 console.log(`✅ 新增 ${addedCount} 期数据`);
                 
-                // 按期数降序排列（最新在前）
                 allRecords.sort((a, b) => parseInt(b.period, 10) - parseInt(a.period, 10));
                 
-                // 限制最大数量
                 if (allRecords.length > MAX_HISTORY) {
                     allRecords = allRecords.slice(0, MAX_HISTORY);
                 }
                 
-                // 重新计算所有N值和对错
                 updateAllRecords(allRecords);
-                
                 saveToLocalStorage(allRecords);
                 
                 return allRecords;
             }
 
             // ============================================================
-            // 5. 更新所有记录的N值和对错
+            // 5. 更新所有记录
             // ============================================================
             function updateAllRecords(records) {
                 if (!records || records.length === 0) return;
-                
-                // records 按期数降序排列：[最新, 次新, 第三新, ...]
                 
                 // 最新一期（索引0）没有下期
                 records[0].N = null;
                 records[0].groupN = null;
                 records[0].intervalN = null;
-                records[0].correct = null;
+                records[0].correctH = null;
+                records[0].correctM = null;
+                records[0].correctN = null;
                 
-                // 从索引1开始，每期的下期是索引 i-1
                 for (let i = 1; i < records.length; i++) {
                     const current = records[i];
                     const nextPeriod = records[i-1];
                     
-                    const result = checkCorrect(current, nextPeriod);
+                    const result = checkAllCorrect(current, nextPeriod);
                     
-                    if (result) {
-                        current.N = result.N;
-                        current.groupN = result.groupN;
-                        current.intervalN = result.intervalN;
-                        current.correct = result.correct;
-                    } else {
-                        current.N = null;
-                        current.groupN = null;
-                        current.intervalN = null;
-                        current.correct = null;
-                    }
+                    current.N = result.N;
+                    current.groupN = result.groupN;
+                    current.intervalN = result.intervalN;
+                    current.correctH = result.correctH;
+                    current.correctM = result.correctM;
+                    current.correctN = result.correctN;
                 }
             }
 
@@ -770,9 +780,21 @@
                 return '';
             }
 
+            function getCorrectClass(correct) {
+                if (correct === '对') return 'correct';
+                if (correct === '错') return 'wrong';
+                return 'na';
+            }
+
+            function getCorrectText(correct) {
+                if (correct === '对') return '✅';
+                if (correct === '错') return '❌';
+                return '—';
+            }
+
             function renderHistory(history) {
                 if (!history || history.length === 0) {
-                    HISTORY_BODY.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>`;
+                    HISTORY_BODY.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>`;
                     HISTORY_COUNT.textContent = '📊 0 期';
                     return;
                 }
@@ -781,18 +803,8 @@
                 for (let i = 0; i < display.length; i++) {
                     const rec = display[i];
                     
-                    // 对错状态
-                    let correctClass = 'na';
-                    let correctText = '—';
-                    if (rec.correct === '对') {
-                        correctClass = 'correct';
-                        correctText = '✅ 对';
-                    } else if (rec.correct === '错') {
-                        correctClass = 'wrong';
-                        correctText = '❌ 错';
-                    }
+                    const isNew = rec.timestamp && (Date.now() - rec.timestamp < 180000);
                     
-                    // 下期L
                     let nextL = '—', nextLInterval = '—', nextLClass = '';
                     if (i > 0) {
                         const nextRec = display[i - 1];
@@ -801,8 +813,6 @@
                         nextLClass = getIntervalClass(nextRec.groupL);
                     }
 
-                    const isNew = rec.timestamp && (Date.now() - rec.timestamp < 180000);
-
                     html += `<tr>
                         <td><strong>${rec.period}</strong>${isNew ? ' <span class="new-badge">NEW</span>' : ''}</td>
                         <td>${rec.H} <span class="interval-tag ${getIntervalClass(rec.groupH)}">${rec.intervalH}</span></td>
@@ -810,7 +820,9 @@
                         <td>${rec.L} <span class="interval-tag ${getIntervalClass(rec.groupL)}">${rec.intervalL}</span></td>
                         <td>${rec.N !== null ? rec.N : '—'}${rec.intervalN ? ` <span class="interval-tag ${getIntervalClass(rec.groupN)}">${rec.intervalN}</span>` : ''}</td>
                         <td>${nextL !== '—' ? nextL : '—'}${nextL !== '—' ? ` <span class="interval-tag ${nextLClass}">${nextLInterval}</span>` : ''}</td>
-                        <td><span class="badge-result ${correctClass}">${correctText}</span></td>
+                        <td><span class="badge-result ${getCorrectClass(rec.correctH)}">${getCorrectText(rec.correctH)}</span></td>
+                        <td><span class="badge-result ${getCorrectClass(rec.correctM)}">${getCorrectText(rec.correctM)}</span></td>
+                        <td><span class="badge-result ${getCorrectClass(rec.correctN)}">${getCorrectText(rec.correctN)}</span></td>
                     </tr>`;
                 }
                 HISTORY_BODY.innerHTML = html;
@@ -949,9 +961,8 @@
                 if (window._autoInterval) clearInterval(window._autoInterval);
             });
 
-            console.log('✅ 页面初始化完成（新增N值）');
-            console.log('📌 N = (H + M + 下期L) % 27');
-            console.log('📌 对错判断：本期N与下期L组合一致');
+            console.log('✅ 页面初始化完成（H/M/N 分别判断对错）');
+            console.log('📌 H/M/N 分别与下期L组合一致为"对"');
         })();
     </script>
 </body>
