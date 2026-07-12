@@ -19,7 +19,7 @@
             justify-content: center;
         }
         .app {
-            max-width: 880px;
+            max-width: 900px;
             width: 100%;
             background: white;
             border-radius: 32px;
@@ -148,7 +148,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
-            min-width: 750px;
+            min-width: 800px;
         }
         th {
             background: #f1f5f9;
@@ -354,23 +354,40 @@
             padding: 2px 10px;
             border-radius: 30px;
         }
-        .hmn-group {
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .hmn-item {
+        .push-status {
             font-size: 11px;
+            color: #64748b;
+            padding: 2px 10px;
+            background: #f1f5f9;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .push-status.active {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .push-status.inactive {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .push-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .push-dot.on { background: #22c55e; }
+        .push-dot.off { background: #ef4444; }
+        .streak-warning {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 10px;
             font-weight: 600;
         }
-        .hmn-item.h-correct { color: #15803d; }
-        .hmn-item.h-wrong { color: #b91c1c; }
-        .hmn-item.m-correct { color: #1d4ed8; }
-        .hmn-item.m-wrong { color: #b45309; }
-        .hmn-item.n-correct { color: #7c3aed; }
-        .hmn-item.n-wrong { color: #dc2626; }
-        .hmn-item.na { color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -387,6 +404,10 @@
                     <span id="statusText">连接中...</span>
                 </span>
                 <span class="history-count" id="historyCount">📊 0 期</span>
+                <span class="push-status" id="pushStatus">
+                    <span class="push-dot off" id="pushDot"></span>
+                    <span id="pushText">推送待命</span>
+                </span>
                 <span class="align-hint">H/M/N 分别与下期L比对</span>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -426,6 +447,20 @@
             </div>
         </div>
 
+        <!-- 连续统计 -->
+        <div class="card" style="background: #fefce8; border-color: #fde68a;">
+            <div class="flex">
+                <span style="font-weight:600; color:#92400e;">📊 连续统计</span>
+                <span style="font-size:12px; color:#92400e;">连续5期正确或错误时触发Bark推送</span>
+            </div>
+            <div class="flex mt-2" style="gap:15px; font-size:13px;">
+                <span>H: <span id="streakH" style="font-weight:700;">-</span></span>
+                <span>M: <span id="streakM" style="font-weight:700;">-</span></span>
+                <span>N: <span id="streakN" style="font-weight:700;">-</span></span>
+                <span id="lastPushTime" style="color:#94a3b8; font-size:11px;"></span>
+            </div>
+        </div>
+
         <!-- 历史记录 -->
         <div style="display: flex; justify-content: space-between; margin: 8px 0 4px; flex-wrap: wrap; gap: 6px;">
             <span style="font-weight:600; color:#1e293b;">📋 历史记录</span>
@@ -436,6 +471,7 @@
             <span class="legend-item"><span class="legend-color wrong"></span> 错 (组合不一致)</span>
             <span style="color:#94a3b8;">— 表示等待下期数据</span>
             <span style="color:#94a3b8;">💾 数据自动保存在本地</span>
+            <span style="color:#92400e;">🔔 连续5期触发推送</span>
         </div>
         <div class="history-table-wrap">
             <table>
@@ -446,9 +482,9 @@
                     <th>L / 区间</th>
                     <th>N / 区间</th>
                     <th>下期L / 区间</th>
-                    <th>H对错</th>
-                    <th>M对错</th>
-                    <th>N对错</th>
+                    <th>H</th>
+                    <th>M</th>
+                    <th>N</th>
                 </tr></thead>
                 <tbody id="historyBody">
                     <tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:20px;">暂无历史</td></tr>
@@ -458,9 +494,9 @@
         <div class="debug-info">
             <span>🔄 N = (H + M + 下期L) % 27</span>
             <span>📌 H/M/N 分别与下期L组合一致为"对"</span>
-            <span>💾 数据持久化：保存在浏览器本地存储</span>
+            <span>🔔 Bark推送: <span id="barkStatus">已配置</span></span>
         </div>
-        <div class="footer-note">* 保留最近100期 · 每期数据自动追加</div>
+        <div class="footer-note">* 保留最近100期 · 每期数据自动追加 · 连续5期触发推送</div>
     </div>
 
     <!-- Toast -->
@@ -472,8 +508,11 @@
             // 1. 配置
             // ============================================================
             const API_URL = '/api/live';
-            const STORAGE_KEY = 'keno_history_data_v3';
+            const STORAGE_KEY = 'keno_history_data_v4';
             const MAX_HISTORY = 100;
+            const BARK_KEY = 'sD67e2g8SLNj5UVbgFPhzH';
+            const BARK_URL = `https://api.day.app/${BARK_KEY}`;
+            const STREAK_THRESHOLD = 5;
             
             // ============================================================
             // 2. 核心计算逻辑
@@ -594,26 +633,16 @@
                 };
             }
 
-            // ============================================================
-            // 3. 对错判断 - H/M/N 分别判断
-            // ============================================================
             function checkAllCorrect(current, nextPeriod) {
                 if (!current || !nextPeriod) {
                     return { correctH: null, correctM: null, correctN: null, N: null, groupN: null, intervalN: null };
                 }
-                
-                // 计算N值
                 const N = computeN(current.H, current.M, nextPeriod.L);
                 const groupN = N !== null ? getIntervalGroup(N) : null;
                 const intervalN = N !== null ? getInterval(N) : null;
-                
-                // H对错：本期H 与 下期L 组合一致
                 const hCorrect = (current.groupH === nextPeriod.groupL) ? '对' : '错';
-                // M对错：本期M 与 下期L 组合一致
                 const mCorrect = (current.groupM === nextPeriod.groupL) ? '对' : '错';
-                // N对错：本期N 与 下期L 组合一致
                 const nCorrect = (groupN !== null && groupN === nextPeriod.groupL) ? '对' : '错';
-                
                 return {
                     correctH: hCorrect,
                     correctM: mCorrect,
@@ -625,7 +654,125 @@
             }
 
             // ============================================================
-            // 4. 本地存储操作
+            // 3. Bark 推送
+            // ============================================================
+            let lastPushTime = 0;
+            const PUSH_COOLDOWN = 60000; // 60秒冷却，防止重复推送
+
+            async function sendBarkPush(title, body, group = 'Keno提醒') {
+                try {
+                    const now = Date.now();
+                    if (now - lastPushTime < PUSH_COOLDOWN) {
+                        console.log('⏳ 推送冷却中，跳过');
+                        return;
+                    }
+                    lastPushTime = now;
+
+                    const url = `${BARK_URL}/${encodeURIComponent(title)}/${encodeURIComponent(body)}?group=${encodeURIComponent(group)}`;
+                    
+                    const response = await fetch(url, { method: 'GET' });
+                    
+                    if (response.ok) {
+                        console.log('✅ Bark推送成功:', title);
+                        document.getElementById('pushStatus').className = 'push-status active';
+                        document.getElementById('pushDot').className = 'push-dot on';
+                        document.getElementById('pushText').textContent = '推送成功';
+                        setTimeout(() => {
+                            document.getElementById('pushStatus').className = 'push-status';
+                            document.getElementById('pushDot').className = 'push-dot off';
+                            document.getElementById('pushText').textContent = '推送待命';
+                        }, 3000);
+                        return true;
+                    } else {
+                        console.warn('⚠️ Bark推送失败:', response.status);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error('❌ Bark推送异常:', error);
+                    return false;
+                }
+            }
+
+            // ============================================================
+            // 4. 连续统计与推送检测
+            // ============================================================
+            function checkStreaksAndPush(records) {
+                if (!records || records.length < STREAK_THRESHOLD + 1) return;
+                
+                // 获取最近STREAK_THRESHOLD期的对错（跳过最新一期，因为它没有下期L）
+                // records[0] 是最新一期（没有对错），records[1] 是第2新，以此类推
+                const recent = records.slice(1, STREAK_THRESHOLD + 1);
+                if (recent.length < STREAK_THRESHOLD) return;
+                
+                // 检查H、M、N各自的连续状态
+                const checkStreak = (key) => {
+                    const values = recent.map(r => r[key]);
+                    const allSame = values.every(v => v === values[0]);
+                    if (!allSame) return null;
+                    if (values[0] === '对') return { status: '正确', value: '✅ 对' };
+                    if (values[0] === '错') return { status: '错误', value: '❌ 错' };
+                    return null;
+                };
+                
+                const hStreak = checkStreak('correctH');
+                const mStreak = checkStreak('correctM');
+                const nStreak = checkStreak('correctN');
+                
+                // 更新界面显示
+                const streakH = document.getElementById('streakH');
+                const streakM = document.getElementById('streakM');
+                const streakN = document.getElementById('streakN');
+                const lastPushEl = document.getElementById('lastPushTime');
+                
+                streakH.textContent = hStreak ? `${hStreak.status} ${hStreak.value}` : '—';
+                streakH.style.color = hStreak ? (hStreak.status === '正确' ? '#15803d' : '#b91c1c') : '#94a3b8';
+                
+                streakM.textContent = mStreak ? `${mStreak.status} ${mStreak.value}` : '—';
+                streakM.style.color = mStreak ? (mStreak.status === '正确' ? '#15803d' : '#b91c1c') : '#94a3b8';
+                
+                streakN.textContent = nStreak ? `${nStreak.status} ${nStreak.value}` : '—';
+                streakN.style.color = nStreak ? (nStreak.status === '正确' ? '#15803d' : '#b91c1c') : '#94a3b8';
+                
+                // 触发推送
+                const latest = records[0]; // 最新一期
+                const latestH = records[1]; // 有对错的最新年份
+                
+                let pushed = false;
+                
+                if (hStreak) {
+                    const title = `🔔 H连续${STREAK_THRESHOLD}期${hStreak.status}`;
+                    const body = `H值: ${latestH.H} (${latestH.intervalH})\n` +
+                                `最新期号: ${latest.period}\n` +
+                                `H最近${STREAK_THRESHOLD}期: ${recent.map(r => r.correctH === '对' ? '✅' : '❌').join(' ')}`;
+                    sendBarkPush(title, body);
+                    pushed = true;
+                }
+                
+                if (mStreak) {
+                    const title = `🔔 M连续${STREAK_THRESHOLD}期${mStreak.status}`;
+                    const body = `M值: ${latestH.M} (${latestH.intervalM})\n` +
+                                `最新期号: ${latest.period}\n` +
+                                `M最近${STREAK_THRESHOLD}期: ${recent.map(r => r.correctM === '对' ? '✅' : '❌').join(' ')}`;
+                    sendBarkPush(title, body);
+                    pushed = true;
+                }
+                
+                if (nStreak) {
+                    const title = `🔔 N连续${STREAK_THRESHOLD}期${nStreak.status}`;
+                    const body = `N值: ${latestH.N} (${latestH.intervalN})\n` +
+                                `最新期号: ${latest.period}\n` +
+                                `N最近${STREAK_THRESHOLD}期: ${recent.map(r => r.correctN === '对' ? '✅' : '❌').join(' ')}`;
+                    sendBarkPush(title, body);
+                    pushed = true;
+                }
+                
+                if (pushed) {
+                    lastPushEl.textContent = `📨 上次推送: ${new Date().toLocaleTimeString()}`;
+                }
+            }
+
+            // ============================================================
+            // 5. 本地存储操作
             // ============================================================
             function loadFromLocalStorage() {
                 try {
@@ -683,16 +830,15 @@
                 updateAllRecords(allRecords);
                 saveToLocalStorage(allRecords);
                 
+                // 检查连续统计并推送
+                checkStreaksAndPush(allRecords);
+                
                 return allRecords;
             }
 
-            // ============================================================
-            // 5. 更新所有记录
-            // ============================================================
             function updateAllRecords(records) {
                 if (!records || records.length === 0) return;
                 
-                // 最新一期（索引0）没有下期
                 records[0].N = null;
                 records[0].groupN = null;
                 records[0].intervalN = null;
@@ -703,9 +849,7 @@
                 for (let i = 1; i < records.length; i++) {
                     const current = records[i];
                     const nextPeriod = records[i-1];
-                    
                     const result = checkAllCorrect(current, nextPeriod);
-                    
                     current.N = result.N;
                     current.groupN = result.groupN;
                     current.intervalN = result.intervalN;
@@ -740,6 +884,7 @@
             const API_STATUS = document.getElementById('apiStatus');
             const STATUS_DOT = document.getElementById('statusDot');
             const STATUS_TEXT = document.getElementById('statusText');
+            const BARK_STATUS = document.getElementById('barkStatus');
 
             function showToast(msg) {
                 TOAST.textContent = msg;
@@ -802,9 +947,7 @@
                 const display = history.slice(0, MAX_HISTORY);
                 for (let i = 0; i < display.length; i++) {
                     const rec = display[i];
-                    
                     const isNew = rec.timestamp && (Date.now() - rec.timestamp < 180000);
-                    
                     let nextL = '—', nextLInterval = '—', nextLClass = '';
                     if (i > 0) {
                         const nextRec = display[i - 1];
@@ -812,7 +955,6 @@
                         nextLInterval = nextRec.intervalL;
                         nextLClass = getIntervalClass(nextRec.groupL);
                     }
-
                     html += `<tr>
                         <td><strong>${rec.period}</strong>${isNew ? ' <span class="new-badge">NEW</span>' : ''}</td>
                         <td>${rec.H} <span class="interval-tag ${getIntervalClass(rec.groupH)}">${rec.intervalH}</span></td>
@@ -847,7 +989,6 @@
                     renderHistory(history);
                     return;
                 }
-
                 PERIOD_DISPLAY.textContent = `#${record.period}`;
                 DATE_DISPLAY.textContent = `${record.date} ${record.time}`;
                 renderGrid(ORIGINAL_GRID, record.original, -1);
@@ -867,6 +1008,7 @@
                 }
                 SCRATCH_L.textContent = record.L;
                 renderHistory(history);
+                checkStreaksAndPush(history);
             }
 
             // ============================================================
@@ -885,37 +1027,27 @@
                 try {
                     const url = `${API_URL}?t=${Date.now()}`;
                     const response = await fetch(url);
-                    
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
-                    
                     const data = await response.json();
-                    
                     if (!data || !data.data || data.data.length === 0) {
                         throw new Error('数据格式错误或为空');
                     }
-                    
                     const items = data.data.slice().sort((a, b) => parseInt(b.nbr, 10) - parseInt(a.nbr, 10));
                     const newRecords = [];
                     for (const item of items) {
                         const rec = buildRecord(item);
                         if (rec) newRecords.push(rec);
                     }
-                    
                     if (newRecords.length === 0) {
                         throw new Error('数据解析失败');
                     }
-
                     COUNTDOWN_DISPLAY.textContent = `⏳ ${data.countdown || '--'}`;
-                    
                     allHistoryData = appendRecords(allHistoryData, newRecords);
-                    
                     const currentRecord = allHistoryData.length > 0 ? allHistoryData[0] : null;
                     updateUI(currentRecord, allHistoryData);
-                    
                     setApiStatus('online', '已连接 ✅');
-                    
                 } catch (error) {
                     console.error('数据加载失败:', error);
                     setApiStatus('offline', '连接失败 ❌');
@@ -961,8 +1093,10 @@
                 if (window._autoInterval) clearInterval(window._autoInterval);
             });
 
-            console.log('✅ 页面初始化完成（H/M/N 分别判断对错）');
-            console.log('📌 H/M/N 分别与下期L组合一致为"对"');
+            BARK_STATUS.textContent = '✅ 已配置 (连续5期触发)';
+            console.log('✅ 页面初始化完成（含Bark推送）');
+            console.log('📌 Bark Key:', BARK_KEY);
+            console.log('📌 连续', STREAK_THRESHOLD, '期正确/错误时触发推送');
         })();
     </script>
 </body>
