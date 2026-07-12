@@ -1,85 +1,96 @@
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, jsonify
 import requests
-import json
 import os
 from datetime import datetime
-
-# 获取当前文件所在目录（Railway 上的工作目录）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import traceback
 
 app = Flask(__name__)
 
-# 历史记录文件路径（在 Railway 文件系统中）
-HISTORY_FILE = os.path.join(BASE_DIR, 'history.json')
-LATEST_FILE = os.path.join(BASE_DIR, 'keno_data.json')
-
-# ==================== 页面路由 ====================
+URL_KJ = "https://pc28.help/api/kj.json?nbr=1"
+URL_KENO = "https://pc28.help/api/keno.json?nbr=1"
 
 @app.route('/')
 def index():
-    """返回主页面 index.html"""
-    try:
-        return send_from_directory(BASE_DIR, 'index.html')
-    except Exception as e:
-        return f"加载页面失败: {e}", 500
-
-# ==================== API 路由 ====================
+    return """
+    <h1>开奖数据合并服务 ✅</h1>
+    <p>访问 <a href="/api/merge">/api/merge</a> 查看合并数据</p>
+    <p>当前时间: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """</p>
+    """
 
 @app.route('/api/live')
 def get_live_data():
-    """从远程 API 实时获取最新数据"""
+    """兼容旧接口：直接返回合并数据"""
+    return get_merged_data()
+
+@app.route('/api/merge')
+def get_merged_data():
+    """获取并合并两个API的数据"""
     try:
-        url = "https://pc28.help/api/keno.json?nbr=1"
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return jsonify(response.json())
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"网络请求失败: {str(e)}"}), 500
+        timeout = 10
+        
+        kj_response = requests.get(URL_KJ, timeout=timeout)
+        keno_response = requests.get(URL_KENO, timeout=timeout)
+        
+        if kj_response.status_code != 200:
+            return jsonify({"error": f"kj.json 请求失败: {kj_response.status_code}"}), 500
+        if keno_response.status_code != 200:
+            return jsonify({"error": f"keno.json 请求失败: {keno_response.status_code}"}), 500
+        
+        kj_data = kj_response.json()
+        keno_data = keno_response.json()
+        
+        # 构建 keno 映射表
+        keno_map = {}
+        keno_list = keno_data.get('data', [])
+        if isinstance(keno_list, list):
+            for item in keno_list:
+                nbr = item.get('nbr')
+                if nbr:
+                    keno_map[str(nbr)] = {
+                        'nbrs': item.get('nbrs', '').split(',') if item.get('nbrs') else [],
+                        'bonus': item.get('bonus', '')
+                    }
+        
+        # 处理 kj 数据
+        merged = []
+        kj_list = kj_data.get('data', [])
+        if isinstance(kj_list, list):
+            for item in kj_list:
+                period = item.get('nbr')
+                if not period:
+                    continue
+                
+                keno_info = keno_map.get(str(period), {})
+                merged.append({
+                    "nbr": period,
+                    "number": item.get('number', ''),
+                    "num": item.get('num', ''),
+                    "combination": item.get('combination', ''),
+                    "time": item.get('time', ''),
+                    "date": item.get('date', ''),
+                    "nbrs": keno_info.get('nbrs', []),
+                    "bonus": keno_info.get('bonus', '')
+                })
+        
+        return jsonify({
+            "source": "merged",
+            "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total": len(merged),
+            "data": merged
+        })
+        
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "请求超时"}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({"error": "网络连接失败"}), 503
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 @app.route('/api/local')
 def get_local_data():
-    """读取本地 kenro_data.json 文件（最新数据）"""
-    try:
-        if os.path.exists(LATEST_FILE):
-            with open(LATEST_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return jsonify(data)
-        return jsonify({"error": "本地数据文件不存在，请先运行更新脚本"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/history')
-def get_history():
-    """获取历史记录（最近 30 期）"""
-    try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return jsonify({
-                "count": len(data),
-                "data": data,
-                "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
-        # 如果文件不存在，返回空历史
-        return jsonify({
-            "count": 0,
-            "data": [],
-            "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/test')
-def test():
-    """测试路由，检查 Flask 是否运行正常"""
-    return "✅ Flask 运行正常！"
-
-# ==================== 启动服务 ====================
+    """兼容旧接口：返回合并数据"""
+    return get_merged_data()
 
 if __name__ == '__main__':
-    # Railway 会通过环境变量 PORT 指定端口
     port = int(os.environ.get('PORT', 5000))
-    # 监听所有网络接口
     app.run(host='0.0.0.0', port=port)
