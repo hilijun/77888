@@ -19,7 +19,7 @@ def index():
 
 @app.route('/api/live')
 def get_live_data():
-    """兼容旧接口：直接返回合并数据"""
+    """兼容旧接口"""
     return get_merged_data()
 
 @app.route('/api/merge')
@@ -88,7 +88,7 @@ def get_merged_data():
 
 @app.route('/api/local')
 def get_local_data():
-    """兼容旧接口：返回合并数据"""
+    """兼容旧接口"""
     return get_merged_data()
 
 if __name__ == '__main__':
