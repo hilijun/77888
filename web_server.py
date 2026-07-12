@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Keno · 快乐彩数据分析</title>
+    <title>Keno - 快乐彩数据分析</title>
     <style>
         * {
             box-sizing: border-box;
